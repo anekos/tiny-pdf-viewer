@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>tiny-pdf-viewer</title>
+  <style>
+    :root {
+      --toolbar-h: 44px;
+      --bg: #1e1e1e;
+      --toolbar-bg: #2b2b2b;
+      --fg: #e8e8e8;
+      --accent: #4a9eff;
+      --gap: 4px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font: 14px/1.4 system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #toolbar {
+      flex: 0 0 var(--toolbar-h);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid #000;
+      user-select: none;
+    }
+
+    #toolbar button {
+      background: #3a3a3a;
+      color: var(--fg);
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #toolbar button:hover { background: #474747; }
+    #toolbar button:disabled { opacity: 0.4; cursor: default; }
+
+    #slider {
+      flex: 1 1 auto;
+      min-width: 60px;
+      accent-color: var(--accent);
+    }
+    /* Right binding (rtl): mirror the slider so the right end is the first page
+       and the progress fill grows as you read right-to-left. */
+    #slider.rtl { transform: scaleX(-1); }
+
+    #page-indicator {
+      flex: 0 0 auto;
+      min-width: 90px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    #stage {
+      flex: 1 1 auto;
+      overflow: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      background: var(--bg);
+    }
+
+    #pages {
+      display: flex;
+      flex-direction: row;
+      gap: var(--gap);
+      align-items: flex-start;
+      padding: var(--gap);
+    }
+
+    #pages canvas {
+      display: block;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    }
+    #pages canvas.hidden { display: none; }
+
+    #message {
+      position: absolute;
+      inset: var(--toolbar-h) 0 0 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      pointer-events: none;
+    }
+    #message.show { display: flex; }
+    #message .box {
+      max-width: 32em;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid #555;
+      border-radius: 8px;
+      padding: 18px 22px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="toolbar">
+      <button id="prev" type="button" title="前へ">◀</button>
+      <input id="slider" type="range" min="1" max="1" value="1" step="1" disabled />
+      <button id="next" type="button" title="次へ">▶</button>
+      <span id="page-indicator">– / –</span>
+      <button id="toggle-spread" type="button" title="見開き / 単ページ">見開き</button>
+      <button id="toggle-fullscreen" type="button" title="全画面">⛶</button>
+    </div>
+    <div id="stage">
+      <div id="pages">
+        <canvas id="canvas0"></canvas>
+        <canvas id="canvas1"></canvas>
+      </div>
+    </div>
+    <div id="message"><div class="box"></div></div>
+  </div>
+
+  <script type="module" src="./js/viewer.js"></script>
+</body>
+</html>
