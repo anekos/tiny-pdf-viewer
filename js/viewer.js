@@ -41,10 +41,13 @@ function showMessage(text) {
 function parseParams() {
   const p = new URLSearchParams(location.search);
   const pageRaw = parseInt(p.get('page') ?? '', 10);
+  // binding=right (right binding) maps to rtl, binding=left to ltr; default
+  // right. Unknown/missing values fall through to rtl (createState revalidates).
+  const BINDING = { right: 'rtl', left: 'ltr' };
   return {
     fileUrl: p.get('file_url'),
     page: Number.isFinite(pageRaw) ? pageRaw : 1,
-    dir: p.get('dir') ?? 'rtl', // createState validates unknown values
+    dir: BINDING[p.get('binding')] ?? 'rtl',
     spread: (p.get('spread') ?? 'on') !== 'off',
   };
 }

@@ -17,7 +17,7 @@ index.html?file_url=/pdfs/novel.pdf&page=10
 |---|---|---|---|
 | `file_url` | ✅ | — | 表示する PDF の URL |
 | `page` | — | `1` | 初期表示ページ（その番号を含む見開きを表示） |
-| `dir` | — | `rtl` | 綴じ方向。`rtl`（右綴じ）/ `ltr`（左綴じ） |
+| `binding` | — | `right` | 綴じ方向。`right`（右綴じ）/ `left`（左綴じ） |
 | `spread` | — | `on` | 見開き。`on` / `off`（単ページ） |
 
 ### 操作
