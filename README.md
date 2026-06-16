@@ -29,7 +29,16 @@ index.html?file_url=/pdfs/novel.pdf&page=10
 
 ## デプロイ
 
-ビルド不要。このフォルダ一式（`index.html` / `js/` / `vendor/`）を Web サーバに置くだけ。
+ビルド不要。実行に必要なのは `index.html` / `js/` / `vendor/` の3つだけ。
+
+`make deploy` でデプロイ先にコピーできる（`js/` と `vendor/` は `--delete` 付き rsync でミラーし、テストなど開発用ファイルは含めない）:
+
+```sh
+make deploy                       # 既定の DEST=/mnt/irmagi/tiny-pdf-viewer へ
+make deploy DEST=/other/path      # コピー先を変更
+```
+
+手動で置く場合も、上記3つを Web サーバの公開ディレクトリにコピーするだけ。
 
 ### nginx での配信
 
@@ -61,6 +70,49 @@ server {
 curl -I -H "Range: bytes=0-1023" https://example/pdfs/big.pdf
 # → 206 Partial Content と Content-Range が返れば OK
 ```
+
+## 大きい PDF と linearize
+
+このビューアは pdf.js を「必要分だけ Range で取得する」設定（`disableAutoFetch` /
+`disableStream`）で使う。前ページを先頭からダウンロードしないため、配信側が以下を満たすことが前提:
+
+- `Accept-Ranges: bytes` と `Content-Length` を返す。
+- `application/pdf` に **gzip / Content-Encoding をかけない**（Range が壊れて全ダウンロードになる）。
+
+その上で、**大きい PDF は linearize（web 最適化）しておくことを強く推奨**する。
+非 linearize の PDF は相互参照（xref）がファイル末尾にあり、最初のページを出すまでに
+広い範囲を読みに行くため、回線によっては「ほぼ全部ダウンロードしてからやっと表示」に
+なりやすい。linearize された PDF は「先頭から1ページ目をすぐ出す」構造（fast web view）を
+持つため、Range での部分取得が意図どおり効く。
+
+### linearize されているか確認する
+
+linearization 辞書は仕様上ファイル先頭 1024 バイト以内に必ず収まる。先頭だけ見れば判定できる:
+
+```sh
+# ローカル
+head -c 1024 file.pdf | grep -a Linearized        # 出力あり → linearized
+
+# リモート（先頭だけ Range 取得）
+curl -s -r 0-1023 https://example/pdfs/big.pdf | grep -a Linearized
+
+# 厳密に検証（全体を読むので遅い）
+qpdf --check file.pdf                              # "File is linearized" と表示される
+```
+
+### linearize する
+
+```sh
+qpdf --linearize in.pdf out.pdf
+```
+
+- **ロスレス**: ページ・画像・テキスト・ストリームは再エンコードしない（画質劣化なし）。
+  オブジェクトの並びと索引を作り直すだけ。
+- ファイル全体が書き直されるため、**バイト列・ETag・更新日時が変わる**。サイズはヒント
+  テーブルの分わずかに増えることが多い。
+- **デジタル署名は無効化される**（署名対象のバイト範囲が変わるため）。インクリメンタル
+  更新履歴も統合されて消える。
+- 効果が出るのは Range 配信時のみ。後で何か編集すると linearize が外れることがある。
 
 ## 開発
 
