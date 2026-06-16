@@ -74,10 +74,16 @@ async function render() {
   const shown = slots.filter((n) => n != null);
   els.indicator.textContent = `${shown.join('–')} / ${state.totalPages}`;
 
-  // Size each slot to fit the stage width (width-fit, DESIGN §6.5).
-  const gap = parseFloat(getComputedStyle(els.pages).gap) || 0;
-  const available = els.stage.clientWidth - gap * (slots.length - 1) - 2 * (parseFloat(getComputedStyle(els.pages).padding) || 0);
-  const cssWidth = Math.max(1, Math.floor(available / slots.length));
+  // Fit the whole spread inside the stage (contain-fit): each slot gets an equal
+  // share of the width, and the full stage height, so nothing overflows and no
+  // scrolling is needed. The page itself is letterboxed within that box.
+  const pagesStyle = getComputedStyle(els.pages);
+  const gap = parseFloat(pagesStyle.gap) || 0;
+  const padX = (parseFloat(pagesStyle.paddingLeft) || 0) + (parseFloat(pagesStyle.paddingRight) || 0);
+  const padY = (parseFloat(pagesStyle.paddingTop) || 0) + (parseFloat(pagesStyle.paddingBottom) || 0);
+  const availW = els.stage.clientWidth - gap * (slots.length - 1) - padX;
+  const boxWidth = Math.max(1, Math.floor(availW / slots.length));
+  const boxHeight = Math.max(1, Math.floor(els.stage.clientHeight - padY));
   const dpr = window.devicePixelRatio || 1;
 
   await Promise.all(
@@ -89,7 +95,7 @@ async function render() {
       }
       canvas.classList.remove('hidden');
       try {
-        await doc.renderPage(pageNumber, canvas, { cssWidth, dpr });
+        await doc.renderPage(pageNumber, canvas, { boxWidth, boxHeight, dpr });
       } catch (err) {
         if (token === renderToken) {
           console.error(`ページ ${pageNumber} の描画に失敗しました`, err);

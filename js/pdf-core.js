@@ -26,20 +26,23 @@ class PdfDocument {
     return this._doc.numPages;
   }
 
-  // Render `pageNumber` into `canvas`, fitting it to `cssWidth` CSS pixels.
-  // Returns the resulting CSS height. Re-rendering the same canvas cancels the
+  // Render `pageNumber` into `canvas`, contained within a `boxWidth`x`boxHeight`
+  // CSS-pixel box (aspect preserved). Re-rendering the same canvas cancels the
   // previous render rather than racing it.
-  async renderPage(pageNumber, canvas, { cssWidth, dpr = 1 }) {
+  async renderPage(pageNumber, canvas, { boxWidth, boxHeight, dpr = 1 }) {
     const previous = this._renderTasks.get(canvas);
     if (previous) previous.cancel();
 
     const page = await this._doc.getPage(pageNumber);
     const unscaled = page.getViewport({ scale: 1 });
-    const scale = cssWidth / unscaled.width;
+    // Contain-fit: scale so the whole page fits inside the box (no overflow),
+    // bound by whichever of width/height is the tighter constraint.
+    const scale = Math.min(boxWidth / unscaled.width, boxHeight / unscaled.height);
     const viewport = page.getViewport({ scale: scale * dpr });
 
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
+    const cssWidth = viewport.width / dpr;
     const cssHeight = viewport.height / dpr;
     canvas.style.width = `${cssWidth}px`;
     canvas.style.height = `${cssHeight}px`;
