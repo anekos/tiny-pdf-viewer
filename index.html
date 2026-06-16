@@ -122,7 +122,8 @@
   <div id="app">
     <div id="toolbar">
       <button id="prev" type="button" title="前へ">◀</button>
-      <input id="slider" type="range" min="1" max="1" value="1" step="1" disabled />
+      <input id="slider" type="range" min="1" max="1" value="1" step="1" list="slider-ticks" disabled />
+      <datalist id="slider-ticks"></datalist>
       <button id="next" type="button" title="次へ">▶</button>
       <span id="page-indicator">– / –</span>
       <button id="toggle-spread" type="button" title="見開き / 単ページ">見開き</button>

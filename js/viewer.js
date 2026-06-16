@@ -15,6 +15,7 @@ const els = {
   prev: document.getElementById('prev'),
   next: document.getElementById('next'),
   slider: document.getElementById('slider'),
+  ticks: document.getElementById('slider-ticks'),
   indicator: document.getElementById('page-indicator'),
   toggleSpread: document.getElementById('toggle-spread'),
   toggleFullscreen: document.getElementById('toggle-fullscreen'),
@@ -27,6 +28,7 @@ let state = null; // navigation state; state.spread is the user's intent
 let renderToken = 0; // guards against out-of-order async renders
 // Physical buttons resolved to reading actions (swapped for rtl, see wireUi).
 let advanceBtn = null; // moves forward in reading order
+let lastTickMax = -1; // current slider max the tick marks were built for
 let retreatBtn = null; // moves backward in reading order
 
 function showMessage(text) {
@@ -65,7 +67,9 @@ async function render() {
   const token = ++renderToken;
 
   // Toolbar state
-  els.slider.max = String(nav.sliderMax(view));
+  const max = nav.sliderMax(view);
+  els.slider.max = String(max);
+  updateTicks(max);
   els.slider.value = String(nav.sliderValue(view));
   els.slider.disabled = false;
   retreatBtn.disabled = view.page <= 1;
@@ -103,6 +107,18 @@ async function render() {
       }
     }),
   );
+}
+
+// Populate the slider's tick marks (datalist), aiming for ~20 evenly spaced
+// guides. Rebuilt only when the step count changes (e.g. spread toggle).
+function updateTicks(max) {
+  if (max === lastTickMax) return;
+  lastTickMax = max;
+  const step = Math.max(1, Math.round(max / 20));
+  const values = [];
+  for (let v = 1; v <= max; v += step) values.push(v);
+  if (values[values.length - 1] !== max) values.push(max);
+  els.ticks.innerHTML = values.map((v) => `<option value="${v}"></option>`).join('');
 }
 
 function wireUi() {
