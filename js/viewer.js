@@ -18,6 +18,7 @@ const els = {
   ticks: document.getElementById('slider-ticks'),
   indicator: document.getElementById('page-indicator'),
   toggleSpread: document.getElementById('toggle-spread'),
+  toggleDir: document.getElementById('toggle-dir'),
   toggleFullscreen: document.getElementById('toggle-fullscreen'),
   message: document.getElementById('message'),
   messageBox: document.querySelector('#message .box'),
@@ -26,10 +27,11 @@ const els = {
 let doc = null;
 let state = null; // navigation state; state.spread is the user's intent
 let renderToken = 0; // guards against out-of-order async renders
-// Physical buttons resolved to reading actions (swapped for rtl, see wireUi).
-let advanceBtn = null; // moves forward in reading order
 let lastTickMax = -1; // current slider max the tick marks were built for
-let retreatBtn = null; // moves backward in reading order
+
+// For rtl the left button advances (reading runs right→left); for ltr the right
+// button advances. dir can change at runtime, so this is resolved per call.
+const leftAdvances = () => state.dir === 'rtl';
 
 function showMessage(text) {
   els.messageBox.textContent = text;
@@ -72,9 +74,14 @@ async function render() {
   updateTicks(max);
   els.slider.value = String(nav.sliderValue(view));
   els.slider.disabled = false;
-  retreatBtn.disabled = view.page <= 1;
-  advanceBtn.disabled = view.page >= state.totalPages;
+  // Mirror the slider and map the physical buttons according to binding dir.
+  els.slider.classList.toggle('rtl', state.dir === 'rtl');
+  const atStart = view.page <= 1;
+  const atEnd = view.page >= state.totalPages;
+  els.prev.disabled = leftAdvances() ? atEnd : atStart;
+  els.next.disabled = leftAdvances() ? atStart : atEnd;
   els.toggleSpread.textContent = state.spread ? '見開き' : '単ページ';
+  els.toggleDir.textContent = state.dir === 'rtl' ? '右綴じ' : '左綴じ';
   const shown = slots.filter((n) => n != null);
   els.indicator.textContent = `${shown.join('–')} / ${state.totalPages}`;
 
@@ -125,25 +132,22 @@ function wireUi() {
   const advance = () => setPage(nav.next(viewState()).page);
   const retreat = () => setPage(nav.prev(viewState()).page);
 
-  // els.prev is the physical left button (◀), els.next the right (▶); the arrows
-  // always point at where the thumb moves. For rtl the slider is mirrored and
-  // reading runs right→left, so advancing moves the thumb left = the left button.
-  if (state.dir === 'rtl') {
-    els.slider.classList.add('rtl');
-    advanceBtn = els.prev;
-    retreatBtn = els.next;
-  } else {
-    advanceBtn = els.next;
-    retreatBtn = els.prev;
-  }
-  advanceBtn.addEventListener('click', advance);
-  retreatBtn.addEventListener('click', retreat);
+  // The physical buttons (els.prev = left ◀, els.next = right ▶) map to advance
+  // or retreat depending on the current binding direction (resolved per click,
+  // since dir can be toggled at runtime). Arrows always point where the thumb
+  // moves: in rtl the slider is mirrored and the left button advances.
+  els.prev.addEventListener('click', () => (leftAdvances() ? advance : retreat)());
+  els.next.addEventListener('click', () => (leftAdvances() ? retreat : advance)());
 
   els.slider.addEventListener('input', () => {
     setPage(nav.setSlider(viewState(), Number(els.slider.value)).page);
   });
   els.toggleSpread.addEventListener('click', () => {
     state = { ...state, spread: !state.spread };
+    render();
+  });
+  els.toggleDir.addEventListener('click', () => {
+    state = { ...state, dir: state.dir === 'rtl' ? 'ltr' : 'rtl' };
     render();
   });
   els.toggleFullscreen.addEventListener('click', () => {
@@ -162,7 +166,7 @@ function wireUi() {
 
   // Wheel flips pages: down = forward (advance), up = backward. A short lock
   // collapses a single inertial gesture (trackpads emit many events) into one
-  // turn. Routing through the buttons reuses the binding/disabled handling.
+  // turn. nav.next/prev clamp at the ends, so no guard is needed here.
   let wheelLockUntil = 0;
   els.stage.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -171,7 +175,7 @@ function wireUi() {
     const now = performance.now();
     if (now < wheelLockUntil) return;
     wheelLockUntil = now + 200;
-    (delta > 0 ? advanceBtn : retreatBtn).click();
+    (delta > 0 ? advance : retreat)();
   }, { passive: false });
 
   let resizeTimer = 0;
