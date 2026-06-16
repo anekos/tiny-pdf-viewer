@@ -15,10 +15,17 @@ index.html?file_url=/pdfs/novel.pdf&page=10
 
 | パラメタ | 必須 | 既定 | 意味 |
 |---|---|---|---|
-| `file_url` | ✅ | — | 表示する PDF の URL |
+| `file_url` | ✅※ | — | 表示する PDF の URL |
+| `file_path` | ✅※ | — | サーバ上の絶対パス。自ホストの `/file/` 配下の URL（`<origin>/file/<path>`）に変換して開く |
 | `page` | — | `1` | 初期表示ページ（その番号を含む見開きを表示） |
 | `binding` | — | `right` | 綴じ方向。`right`（右綴じ）/ `left`（左綴じ） |
 | `spread` | — | `on` | 見開き。`on` / `off`（単ページ） |
+
+※ `file_url` か `file_path` のどちらかが必須。両方ある場合は `file_path` を優先する。
+
+```
+index.html?file_path=/mnt/data/book/sample.pdf
+```
 
 ### 操作
 

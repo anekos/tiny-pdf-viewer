@@ -38,14 +38,26 @@ function showMessage(text) {
   els.message.classList.add('show');
 }
 
+// file_path is a server-local absolute path served under /file/ on this same
+// host. Encode each segment (keeps the slashes; escapes spaces, non-ASCII, and
+// URL-significant chars like #/?) and prefix with /file/. An absolute path keeps
+// its leading slash, yielding the expected /file//mnt/... double slash.
+function filePathToUrl(path) {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  return `${location.origin}/file/${encoded}`;
+}
+
 function parseParams() {
   const p = new URLSearchParams(location.search);
   const pageRaw = parseInt(p.get('page') ?? '', 10);
   // binding=right (right binding) maps to rtl, binding=left to ltr; default
   // right. Unknown/missing values fall through to rtl (createState revalidates).
   const BINDING = { right: 'rtl', left: 'ltr' };
+  // file_path takes precedence over file_url: it's resolved against this host's
+  // /file/ endpoint, so a bare server path can be used in place of a full URL.
+  const filePath = p.get('file_path');
   return {
-    fileUrl: p.get('file_url'),
+    fileUrl: filePath ? filePathToUrl(filePath) : p.get('file_url'),
     page: Number.isFinite(pageRaw) ? pageRaw : 1,
     dir: BINDING[p.get('binding')] ?? 'rtl',
     spread: (p.get('spread') ?? 'on') !== 'off',
@@ -193,7 +205,7 @@ async function main() {
   const params = parseParams();
 
   if (!params.fileUrl) {
-    showMessage('file_url パラメタが指定されていません。\n例: index.html?file_url=/pdfs/sample.pdf');
+    showMessage('file_url / file_path パラメタが指定されていません。\n例: index.html?file_url=/pdfs/sample.pdf\n例: index.html?file_path=/mnt/data/sample.pdf');
     return;
   }
 
