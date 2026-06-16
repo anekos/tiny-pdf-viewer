@@ -144,6 +144,20 @@ function wireUi() {
     else if (e.key === 'ArrowRight') els.next.click();
   });
 
+  // Wheel flips pages: down = forward (advance), up = backward. A short lock
+  // collapses a single inertial gesture (trackpads emit many events) into one
+  // turn. Routing through the buttons reuses the binding/disabled handling.
+  let wheelLockUntil = 0;
+  els.stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY;
+    if (!delta) return;
+    const now = performance.now();
+    if (now < wheelLockUntil) return;
+    wheelLockUntil = now + 200;
+    (delta > 0 ? advanceBtn : retreatBtn).click();
+  }, { passive: false });
+
   let resizeTimer = 0;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
